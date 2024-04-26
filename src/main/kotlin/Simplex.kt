@@ -3,9 +3,11 @@ package org.simplex
 /**
  * Class implementing Simplex Algorithm in Kotlin.
  *
- * @param objFunction A string representing the objective function to solve (maximize or minimize). The format of the
- *                    input is as follows: "<function> <var1> <+/-> <var2> ... <+/-> <varx>". The function can be
- *                    either "Maximize" or "Minimize". An example is "Minimize 3x1 + 2x2 - 4x3".
+ * TODO: ONLY WORKS FOR MAXIMIZING RN
+ *
+ * @param objFunction A string representing the objective function to solve (maximize). The format of the
+ *                    input is as follows: "Maximize <var1> <+/-> <var2> ... <+/-> <varx>". An example is
+ *                    "Maximize 3x1 + 2x2 - 4x3".
  * @param constraints A list of strings representing the constraints this LP contains. This runs under the assumption
  *                    that all variables are greater than 0 and therefore this is not a part of the list of
  *                    constraints. The format is as follows: "p1v1 +/- p2v2 ..." to be separated. A sample input is
@@ -14,12 +16,12 @@ package org.simplex
  * Shape of the overall array that this is representing (size may change):
  *
  *                       c1  c2  c3  c4  c5  c6
- *                 _________________________________
+ *           _______________________________________
  *                       x1  x2  x3  x4  x5  x6  RHS
  *                 C1 | a00 a01 a02 a03 a04 a05   b1
  *                 C2 | a10 a11 a12 a13 a14 a15   b2
  *                 C3 | a20 a21 a22 a23 a24 a25   b3
- *                 __________________________________
+ *           ________________________________________
  *             negObj | no1 no2 no3 no4 no5 no6  no7
  *
  * -- The top row (c1 - c6) represents the values in the c matrix, representing the parameters of the objective
@@ -42,19 +44,93 @@ package org.simplex
  * -- The last row (no1 - no7) represents values from the negObj matrix.
  */
 class Simplex(val objFunction: String, val constraints: List<String>) {
-    var c: MutableList<Int> = mutableListOf() // List of parameters for objective function
+    var c: MutableList<Double> = mutableListOf() // List of parameters for objective function
     var x: MutableList<String> = mutableListOf() // List of variables total
-    var b: MutableList<Int> = mutableListOf() // List of outputs of each constraint
-    var A: MutableList<MutableList<Int>> = mutableListOf() // Matrix of parameters of each constraint
-    var negObj: MutableList<Int> = mutableListOf() // List representing negative values of the objective
-
-    var soln: MutableList<Int> = mutableListOf() // The current solution state, in the order of x's variables
+    var b: MutableList<Double> = mutableListOf() // List of outputs of each constraint
+    var A: MutableList<MutableList<Double>> = mutableListOf() // Matrix of parameters of each constraint
+    var negObj: MutableList<Double> = mutableListOf() // List representing negative values of the objective
+    var soln: MutableList<Double> = mutableListOf() // The current solution state, in the order of x's variables
 
     // Initialize Simplex by converting objective function and constraints to standard form
     init {
         convertObjective()
         convertConstraints()
-        negObj.add(0)
+        negObj.add(0.0)
+    }
+
+    fun runSimplex() {
+        var negativeExists: Boolean = checkNegInNegObj()
+
+        // Run iterations until there are no more negative values in the last row
+//        while (negativeExists) {
+            // Find which column has minimum value (most negative) (column of pivot element)
+            val mostNegativeColIdx = negObj.indexOf(negObj.min())
+
+            // Find quotients to identify row of pivot element
+            val newB: MutableList<Double> = mutableListOf()
+            for (i in 0..<A.size) {
+                newB.add(b[i] / A[i][mostNegativeColIdx])
+            }
+            val smallestRowIdx = newB.indexOf(newB.min())
+            pivot(smallestRowIdx, mostNegativeColIdx)
+//        }
+    }
+
+    /**
+     * Pivot about the element given by the inputs.
+     *
+     * This includes setting the pivot element to 1 by dividing the row it is in by its value. Then, each of the other
+     * values in the column of the pivot element are set to 0 by subtracting them by multiplied variations of the row
+     * the pivot element is in.
+     *
+     * @param rowIdx Int representing the index of the row that the pivot element is in
+     * @param colIdx Int representing the index of the column that the pivot element is in
+     */
+    private fun pivot(rowIdx: Int, colIdx: Int) {
+        // Set pivot element to 1 by dividing entire row by that value
+        val pivotElement = A[rowIdx][colIdx]
+        A[rowIdx] = A[rowIdx].map { it / pivotElement}.toMutableList()
+        b[rowIdx] = b[rowIdx] / pivotElement
+
+        // Set all other rows to 0 in that column
+        for (constRow in 0..<A.size) {
+            if (constRow != rowIdx) {
+                val factor = A[constRow][colIdx] * -1
+                val newA = A[rowIdx].map { (it * factor) }
+                for (constCol in 0..<A[0].size) {
+                    A[constRow][constCol] += newA[constCol]
+                }
+                b[constRow] = (b[rowIdx] * factor) + b[constRow]
+            }
+        }
+
+        // Set last row to 0 in that column
+        val factor = negObj[colIdx] * -1
+        val newA = A[rowIdx].map { (it * factor) }
+        for (constCol in 0..<negObj.size - 1) {
+            negObj[constCol] += newA[constCol]
+        }
+        negObj[negObj.size - 1] += (b[rowIdx] * factor)
+    }
+
+    fun printSimplex() {
+        println()
+
+        println()
+    }
+
+    /**
+     * Check if the negative objective list (last row) contains a negative value or not
+     *
+     * @return Boolean true if there is a negative value and false otherwise
+     */
+    private fun checkNegInNegObj(): Boolean {
+        for (x in negObj) {
+            if (x < 0) {
+                return true
+            }
+        }
+        return false
     }
 
     /**
@@ -70,7 +146,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
         // Convert each constraint into lists of variables form
         for (constraint in constraints) {
             totalConstraints += 1
-            var thisParam: MutableList<Int> = mutableListOf()
+            val thisParam: MutableList<Double> = mutableListOf()
 
             // If >= for all but last, reverse the constraint because all need to be upper bounds
             val reverse: Int = if (">=" in constraint) -1 else 1
@@ -82,23 +158,23 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
             // For each variable check if it is in the constraint or not and add corresponding parameter to thisParam
             for (i in 0..<x.size) {
                 if (x[i] in thisConstraint.second) {
-                    thisParam.add(thisConstraint.first[thisConstraint.second.indexOf(x[i])])
+                    thisParam.add((thisConstraint.first[thisConstraint.second.indexOf(x[i])]))
                 } else {
-                    thisParam.add(0)
+                    thisParam.add(0.0)
                 }
             }
 
-            thisParam.add(1) // Add parameter 1 for slack variable
+            thisParam.add(1.0) // Add parameter 1 for slack variable
             x.add("e$totalConstraints") // Add slack variable to variables
-            c.add(0) // Add initial 0 to objective function parameters for each slack variable / constraint being added
-            negObj.add(0)
+            c.add(0.0) // Add initial 0 to objective function parameters for each slack variable / constraint being added
+            negObj.add(0.0)
             // Add 0 to each previous constraint for the new slack variable
             for (prevConstIdx in 0..<A.size) {
-                A[prevConstIdx].add(0)
+                A[prevConstIdx].add(0.0)
             }
             A.add(thisParam) // Add thisParam list to A matrix
             // Add result to b vector (reversed if necessary)
-            b.add(constraint.substring(constraint.indexOf("=") + 2).toInt() * reverse)
+            b.add(constraint.substring(constraint.indexOf("=") + 2).toDouble() * reverse)
             soln.add(b.last()) // Add b values associated with correct slack variable to initial solution
         }
     }
@@ -106,22 +182,16 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
     /**
      * Convert the objective function to the standard form necessary for Simplex
      *
-     * Input is of form "<function> <var1> <+/-> <var2> ... <+/-> <varx>". The function can be either "Maximize" or
-     * "Minimize". An example is "Minimize 3x1 + 2x2 - 4x3".
-     *
-     * Since Simplex requires a maximization problem, if the goal is to minimize, each variable is multiplied by -1 to
-     * convert to the equivalent maximization problem.
+     * Input is of form "Maximize <var1> <+/-> <var2> ... <+/-> <varx>". An example is "Maximize 3x1 + 2x2 - 4x3".
      */
     private fun convertObjective() {
-        var reverse: Int = if (objFunction.substring(0, 3) == "Max") 1 else -1 // If minimizing, reverse the objective
         val objStandard = separateEquation(objFunction.substring(objFunction.indexOf(" ") + 1))
-        objStandard.first.replaceAll { it * reverse }
         c = objStandard.first
         x = objStandard.second
 
         // Initialize solution so that all x variables are 0 and negObj is negative values of current c
         for (idx in 0..<x.size) {
-            soln.add(0)
+            soln.add(0.0)
             negObj.add(c[idx] * -1)
         }
     }
@@ -131,15 +201,15 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
      *
      * Each variable is separated from its coefficient and, in the case of a subtraction, converted to the negative form
      *
-     * @param equation: A string of the format "p1v1 +/- p2v2 ..." to be separated. A sample input is "- 3x1 + 2x2"
+     * @param equation A string of the format "p1v1 +/- p2v2 ..." to be separated. A sample input is "- 3x1 + 2x2"
      *
-     * @return A Pair of two Mutable Lists, the first containing Ints representing the parameters of each of the terms
+     * @return A Pair of two Mutable Lists, the first containing Doubles representing the parameters of each of the terms
      * and the second containing Strings representing the variables of each of the terms
      */
-    private fun separateEquation(equation: String): Pair<MutableList<Int>, MutableList<String>> {
+    private fun separateEquation(equation: String): Pair<MutableList<Double>, MutableList<String>> {
         val initList = equation.split(" ")
         var multiply: Int = 1 // If come across a '-', then change this to -1
-        val params: MutableList<Int> = mutableListOf()
+        val params: MutableList<Double> = mutableListOf()
         val vars: MutableList<String> = mutableListOf()
 
         // Loop through all variables in equation
@@ -154,7 +224,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
             if (value != "+") {
                 // If no beginning, assume to be 1
                 if (!value[0].isDigit()) {
-                    params.add(1 * multiply)
+                    params.add((1 * multiply).toDouble())
                     vars.add(value)
                     continue
                 }
@@ -167,7 +237,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
                     }
                     idxIntEnd += 1
                 }
-                params.add(value.substring(0, idxIntEnd).toInt() * multiply)
+                params.add((value.substring(0, idxIntEnd).toInt() * multiply).toDouble())
                 vars.add(value.substring(idxIntEnd))
             }
             multiply = 1 // Reset multiply
@@ -177,11 +247,11 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
 }
 
 fun main() {
-    val s = Simplex("Maximize 4x1 + 6x2", listOf("- x1 + x2 >= 11", "x1 + x2 <= 27", "2x1 + 5x2 <= 90"))
-    println(s.c)
-    println(s.x)
-    println(s.A)
-    println(s.b)
-    println(s.soln)
-    println(s.negObj)
+    val s = Simplex("Maximize 40x1 + 30x2", listOf("x1 + x2 <= 12", "2x1 + x2 <= 16"))
+    s.runSimplex()
+    println("obj params: ${s.c}")
+    println("obj variables: ${s.x}")
+    println("matrix: ${s.A}")
+    println("RHS: ${s.b}")
+    println("Bottom: ${s.negObj}")
 }
