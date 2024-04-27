@@ -1,5 +1,9 @@
 package org.simplex
 
+import javax.swing.plaf.synth.SynthRadioButtonMenuItemUI
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
 /**
  * Class implementing Simplex Algorithm in Kotlin.
  *
@@ -48,6 +52,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
     var x: MutableList<String> = mutableListOf() // List of variables total
     var b: MutableList<Double> = mutableListOf() // List of outputs of each constraint
     var A: MutableList<MutableList<Double>> = mutableListOf() // Matrix of parameters of each constraint
+    var CVert: MutableList<String> = mutableListOf() // List of variables each constraint represents
     var negObj: MutableList<Double> = mutableListOf() // List representing negative values of the objective
     var soln: MutableList<Double> = mutableListOf() // The current solution state, in the order of x's variables
 
@@ -60,20 +65,46 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
 
     fun runSimplex() {
         var negativeExists: Boolean = checkNegInNegObj()
-
         // Run iterations until there are no more negative values in the last row
-//        while (negativeExists) {
+        while (negativeExists) {
+            println()
             // Find which column has minimum value (most negative) (column of pivot element)
-            val mostNegativeColIdx = negObj.indexOf(negObj.min())
-
-            // Find quotients to identify row of pivot element
+            val mostNegativeColIdx = negObj.indexOf(negObj.subList(0, negObj.size).min())
             val newB: MutableList<Double> = mutableListOf()
             for (i in 0..<A.size) {
-                newB.add(b[i] / A[i][mostNegativeColIdx])
+                if (A[i][mostNegativeColIdx] > 0) {
+                    newB.add(b[i] / A[i][mostNegativeColIdx])
+                }
+                else {
+                    newB.add(-1.0)
+                }
             }
-            val smallestRowIdx = newB.indexOf(newB.min())
+            if (checkNonNeg(newB) == -1) {
+                break
+            }
+
+            // Find which row has the element to pivot at and pivot
+            var smallestRowIdx = checkNonNeg(newB)
+            for (i in 0..<newB.size) {
+                if ((newB[i] >= 0) and (newB[i] < newB[smallestRowIdx])) {
+                    smallestRowIdx = i
+                }
+            }
             pivot(smallestRowIdx, mostNegativeColIdx)
-//        }
+
+            CVert[smallestRowIdx] = x[mostNegativeColIdx] // Update vertical line of what variables are being represented by b
+
+            // Update new solution
+            for (idx in 0..<x.size) {
+                if (x[idx] in CVert) {
+                    soln[idx] = b[CVert.indexOf(x[idx])]
+                } else {
+                    soln[idx] = 0.0
+                }
+            }
+            negativeExists = checkNegInNegObj()
+        }
+
     }
 
     /**
@@ -113,10 +144,35 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
         negObj[negObj.size - 1] += (b[rowIdx] * factor)
     }
 
-    fun printSimplex() {
-        println()
+    /**
+     * Find the current value of the objective function by multiplying each coefficient of the objective by the current
+     * value of the variable
+     *
+     * @return Double representing the value of the objective function for the current values of the solution
+     */
+    fun solveObjective(): Double {
+        var totalSum: Double = 0.0
+        for (idx in 0..<c.size) {
+            totalSum += (c[idx] * soln[idx])
+        }
+        return totalSum
+    }
 
-        println()
+    /**
+     * Check a list for non-negative numbers
+     *
+     * @param newB: MutableList<Double> to check for non-neg value
+     *
+     * @return Return index of minimum non-neg number if it exists and -1 otherwise
+     */
+    private fun checkNonNeg(newB: MutableList<Double>): Int {
+        var nonNeg = -1
+        for (i in 0..<newB.size) {
+            if (newB[i] >= 0) {
+                return i
+            }
+        }
+        return nonNeg
     }
 
     /**
@@ -125,7 +181,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
      * @return Boolean true if there is a negative value and false otherwise
      */
     private fun checkNegInNegObj(): Boolean {
-        for (x in negObj) {
+        for (x in negObj.subList(0, negObj.size)) {
             if (x < 0) {
                 return true
             }
@@ -176,6 +232,7 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
             // Add result to b vector (reversed if necessary)
             b.add(constraint.substring(constraint.indexOf("=") + 2).toDouble() * reverse)
             soln.add(b.last()) // Add b values associated with correct slack variable to initial solution
+            CVert.add("e$totalConstraints") // Add slack variables as variables each constraint represents
         }
     }
 
@@ -247,11 +304,13 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
 }
 
 fun main() {
-    val s = Simplex("Maximize 40x1 + 30x2", listOf("x1 + x2 <= 12", "2x1 + x2 <= 16"))
+    val s = Simplex("Maximize 3x1 + 5x2 + 4x3", listOf("2x1 + 3x2 <= 8", "2x2 + 5x3 <= 10", "3x1 + 2x2 + 4x3 <= 15"))
     s.runSimplex()
     println("obj params: ${s.c}")
     println("obj variables: ${s.x}")
     println("matrix: ${s.A}")
     println("RHS: ${s.b}")
     println("Bottom: ${s.negObj}")
+    println("Solution (Rounded) ${s.soln.map { it.roundToInt() }}") // Rounded solution
+    println("Solution ${s.soln}")
 }
