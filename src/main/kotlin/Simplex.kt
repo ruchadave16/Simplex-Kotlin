@@ -1,13 +1,9 @@
 package org.simplex
 
-import javax.swing.plaf.synth.SynthRadioButtonMenuItemUI
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
  * Class implementing Simplex Algorithm in Kotlin.
- *
- * TODO: ONLY WORKS FOR MAXIMIZING RN
  *
  * @param objFunction A string representing the objective function to solve (maximize). The format of the
  *                    input is as follows: "Maximize <var1> <+/-> <var2> ... <+/-> <varx>". An example is
@@ -47,14 +43,14 @@ import kotlin.math.roundToInt
  *
  * -- The last row (no1 - no7) represents values from the negObj matrix.
  */
-class Simplex(val objFunction: String, val constraints: List<String>) {
-    var c: MutableList<Double> = mutableListOf() // List of parameters for objective function
-    var x: MutableList<String> = mutableListOf() // List of variables total
-    var b: MutableList<Double> = mutableListOf() // List of outputs of each constraint
-    var A: MutableList<MutableList<Double>> = mutableListOf() // Matrix of parameters of each constraint
-    var CVert: MutableList<String> = mutableListOf() // List of variables each constraint represents
-    var negObj: MutableList<Double> = mutableListOf() // List representing negative values of the objective
-    var soln: MutableList<Double> = mutableListOf() // The current solution state, in the order of x's variables
+class Simplex(private val objFunction: String, private val constraints: List<String>) {
+    private var c: MutableList<Double> = mutableListOf() // List of parameters for objective function
+    private var x: MutableList<String> = mutableListOf() // List of variables total
+    private var b: MutableList<Double> = mutableListOf() // List of outputs of each constraint
+    private var A: MutableList<MutableList<Double>> = mutableListOf() // Matrix of parameters of each constraint
+    private var CVert: MutableList<String> = mutableListOf() // List of variables each constraint represents
+    private var negObj: MutableList<Double> = mutableListOf() // List representing negative values of the objective
+    private var soln: MutableList<Double> = mutableListOf() // The current solution state, in the order of x's variables
 
     // Initialize Simplex by converting objective function and constraints to standard form
     init {
@@ -67,7 +63,6 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
         var negativeExists: Boolean = checkNegInNegObj()
         // Run iterations until there are no more negative values in the last row
         while (negativeExists) {
-            println()
             // Find which column has minimum value (most negative) (column of pivot element)
             val mostNegativeColIdx = negObj.indexOf(negObj.subList(0, negObj.size).min())
             val newB: MutableList<Double> = mutableListOf()
@@ -92,7 +87,8 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
             }
             pivot(smallestRowIdx, mostNegativeColIdx)
 
-            CVert[smallestRowIdx] = x[mostNegativeColIdx] // Update vertical line of what variables are being represented by b
+            // Update vertical line of what variables are being represented by b
+            CVert[smallestRowIdx] = x[mostNegativeColIdx]
 
             // Update new solution
             for (idx in 0..<x.size) {
@@ -166,13 +162,12 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
      * @return Return index of minimum non-neg number if it exists and -1 otherwise
      */
     private fun checkNonNeg(newB: MutableList<Double>): Int {
-        var nonNeg = -1
         for (i in 0..<newB.size) {
             if (newB[i] >= 0) {
                 return i
             }
         }
-        return nonNeg
+        return -1
     }
 
     /**
@@ -301,16 +296,55 @@ class Simplex(val objFunction: String, val constraints: List<String>) {
         }
         return Pair(params, vars)
     }
+
+    /**
+     * Print current state
+     */
+    fun printSimplex() {
+        print("Objective Function: ")
+        print("${c[0]}${x[0]}")
+        for (i in 1..<x.size) {
+            if (c[i] != 0.0) {
+                print(" + ${c[i]}${x[i]}")
+            }
+        }
+        print("\nSimplex Matrix:\n")
+        for (i in 0..<x.size) {
+            print("${x[i].padStart(5)} ")
+        }
+        println(" | ${"b".padStart(5)}")
+        for (i in 0..<A.size) {
+            for (j in 0..<A[i].size) {
+                print("${String.format("%.2f", A[i][j]).padStart(5)} ")
+            }
+            println(" | ${String.format("%.2f", b[i]).padStart(5)}")
+        }
+        println("".padStart(44, '-'))
+        for (i in 0..<negObj.size - 1) {
+            print("${String.format("%.2f", negObj[i]).padStart(5)} ")
+        }
+        print(" | ${String.format("%.2f", negObj[negObj.size - 1]).padStart(5)}\n")
+        print("\nSolution (Rounded) [")
+        for (i in 0..<soln.size) {
+            val thisSoln = soln.map { it.roundToInt() }
+            print("${x[i]}: ${thisSoln[i]}") // Rounded solution"
+            if (i != soln.size - 1) {
+                print(", ")
+            }
+        }
+        print("] \nSolution [")
+        for (i in 0..<soln.size) {
+            print("${x[i]}: ${soln[i]}")
+            if (i != soln.size - 1) {
+                print(", ")
+            }
+        }
+        print("]")
+    }
 }
 
 fun main() {
     val s = Simplex("Maximize 3x1 + 5x2 + 4x3", listOf("2x1 + 3x2 <= 8", "2x2 + 5x3 <= 10", "3x1 + 2x2 + 4x3 <= 15"))
     s.runSimplex()
-    println("obj params: ${s.c}")
-    println("obj variables: ${s.x}")
-    println("matrix: ${s.A}")
-    println("RHS: ${s.b}")
-    println("Bottom: ${s.negObj}")
-    println("Solution (Rounded) ${s.soln.map { it.roundToInt() }}") // Rounded solution
-    println("Solution ${s.soln}")
+    s.printSimplex()
 }
