@@ -343,6 +343,7 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
             }
         }
         print("]")
+        print("\nZ (Optimal) = ${solveObjective()}")
     }
 }
 
