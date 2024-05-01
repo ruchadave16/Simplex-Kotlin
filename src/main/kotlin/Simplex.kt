@@ -100,7 +100,6 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
             }
             negativeExists = checkNegInNegObj()
         }
-
     }
 
     /**
@@ -278,6 +277,7 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
                 if (!value[0].isDigit()) {
                     params.add((1 * multiply).toDouble())
                     vars.add(value)
+                    multiply = 1
                     continue
                 }
                 var idxIntEnd: Int = 0
@@ -298,7 +298,10 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
     }
 
     /**
-     * Print current state
+     * Print current state of Simplex
+     *
+     * This function prints the objective function, current simplex matrix, and current solution both rounded and as it
+     * is.
      */
     fun printSimplex() {
         print("Objective Function: ")
@@ -327,7 +330,7 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
         print("\nSolution (Rounded) [")
         for (i in 0..<soln.size) {
             val thisSoln = soln.map { it.roundToInt() }
-            print("${x[i]}: ${thisSoln[i]}") // Rounded solution"
+            print("${x[i]}: ${thisSoln[i]}") // Rounded solution
             if (i != soln.size - 1) {
                 print(", ")
             }
@@ -344,7 +347,7 @@ class Simplex(private val objFunction: String, private val constraints: List<Str
 }
 
 fun main() {
-    val s = Simplex("Maximize 3x1 + 5x2 + 4x3", listOf("2x1 + 3x2 <= 8", "2x2 + 5x3 <= 10", "3x1 + 2x2 + 4x3 <= 15"))
+    val s = Simplex("Maximize 8x1 + 10x2 + 7x3", listOf("x1 + 3x2 + 2x3 <= 10", "- x1 - 5x2 - x3 >= -8"))
     s.runSimplex()
     s.printSimplex()
 }
