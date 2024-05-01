@@ -19,7 +19,7 @@ We aim to implement the Simplex Algorithm to solve Linear Programming maximizati
     ```
     $ gradle init
     ```
-  (b) Follow the instructions on the terminal to set up the project properly. You should now have the following outside the `src` directory, inside the `Simplex-Kotlin` repo:
+    (b) Follow the instructions on the terminal to set up the project properly. You should now have the following outside the `src` directory, inside the `Simplex-Kotlin` repo:
   - src/main/kotlin
     + Simplex.kt
   - gradle
