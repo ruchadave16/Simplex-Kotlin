@@ -2,7 +2,7 @@
 Simplex Algorithm implementation in Kotlin
 
 ## Overview
-We aim to implement the Simplex Algorithm to solve Linear Programming maximization problems in Kotlin. Simplex is an approach that iteratively uses slack variables, a table, and pivot variables to arrive at an optimal solution. A linear program is a problem that aims to arrive at the optimal outcome in a mathematical model that has requirements and objectives that are linearly represented. This project aims to concisely implment Simplex to demonstrate a strong understanding of the algorithm's principles. 
+We aim to implement the Simplex Algorithm to solve Linear Programming maximization problems in Kotlin. Simplex is an approach that iteratively uses slack variables, a table, and pivot variables to arrive at an optimal solution. A linear program is a problem that aims to arrive at the optimal outcome in a mathematical model that has requirements and objectives that are linearly represented. This project aims to concisely implment Simplex to demonstrate a strong understanding of the algorithm's principles. An explanation and walkthrough of the algorithm is provided in the slidedeck.
 
 ## Try It Yourself!
 ### Installation Instructions
